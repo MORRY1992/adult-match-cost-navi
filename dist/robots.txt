@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://adult-match-cost-navi.pages.dev/sitemap.xml

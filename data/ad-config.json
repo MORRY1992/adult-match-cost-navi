@@ -1,0 +1,14 @@
+{
+  "enabled": false,
+  "siteApproved": false,
+  "host": null,
+  "format": "social-bar",
+  "formatsApproved": [],
+  "japanAllowed": false,
+  "categoryApproved": false,
+  "approvalRef": null,
+  "explicit": false,
+  "experiment": "off",
+  "provider": null,
+  "reason": "正式URL未確定、媒体承認・カテゴリ許可・日本配信条件は未確認。広告コードなし。"
+}

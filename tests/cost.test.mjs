@@ -1,0 +1,14 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {calculate} from '../src/cost.mjs';
+import {canLoadAd} from '../src/ad-policy.mjs';
+const s={type:'subscription',pricing:{web:{'1':3800,'3':8800,'6':14800,'12':19800},ios:{'1':4800,'3':10800}},options:[{id:'premium',prices:{'1':3000,'3':8300},bundle:{web:{'1':6400},ios:{'1':7400}}}]};
+test('一括3か月の請求額8800円と月換算2933.33円を分離',()=>{let r=calculate(s,{months:3,channel:'web',billing:'bundle'});assert.equal(r.total,8800);assert.equal(r.initial,8800);assert.equal(r.monthly,8800/3);assert.equal(r.renewal,null)});
+test('月払い継続は条件付き試算、初回3800円',()=>{let r=calculate(s,{months:3,channel:'web',billing:'monthly'});assert.equal(r.total,11400);assert.equal(r.initial,3800);assert.equal(r.status,'conditional')});
+test('iPhoneの経路差とプレミアム3か月8300円加算',()=>assert.equal(calculate(s,{months:3,channel:'ios',billing:'bundle',option:'premium'}).total,19100));
+test('1か月セット料金6400円を重複加算しない',()=>assert.equal(calculate(s,{months:1,channel:'web',billing:'bundle',option:'premium'}).total,6400));
+test('未確認経路・オプション・料金をゼロにしない',()=>{for(let o of [{channel:'android'},{option:'fake'},{months:6,channel:'ios'}])assert.equal(calculate(s,{months:3,channel:'web',billing:'bundle',...o}).total,null)});
+test('ポイント制の消費換算は請求額と別',()=>{let r=calculate({type:'points',points:{send:5,profile:1,unitYen:10,channels:['web']}},{months:3,channel:'web',messages:10,profiles:20});assert.equal(r.requiredPoints,210);assert.equal(r.consumptionYen,2100);assert.equal(r.total,null)});
+test('不正値・負値・過大値を拒否',()=>{for(let months of [0,2,-1,NaN])assert.equal(calculate(s,{months,channel:'web'}).status,'unknown');assert.equal(calculate({type:'points',points:{send:5,profile:1,unitYen:10,channels:['web']}},{months:1,channel:'web',messages:-1}).status,'unknown')});
+test('未承認広告は通信許可しない',()=>assert.equal(canLoadAd({enabled:false},{}),false));
+test('ホストと書面承認・日本配信・同意・年齢条件すべて必要',()=>{const c={enabled:true,siteApproved:true,host:'example.com',format:'social-bar',formatsApproved:['social-bar'],japanAllowed:true,categoryApproved:true,approvalRef:'owner-confirmed',explicit:false};const ctx={host:'example.com',adultAcknowledged:true,consent:true};assert.equal(canLoadAd(c,ctx),true);assert.equal(canLoadAd(c,{...ctx,host:'evil.com'}),false);assert.equal(canLoadAd({...c,explicit:true},ctx),false);assert.equal(canLoadAd(c,{...ctx,consent:false}),false)});

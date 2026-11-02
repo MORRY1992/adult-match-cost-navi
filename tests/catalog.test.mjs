@@ -1,0 +1,7 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {calculate} from '../src/cost.mjs';
+const data=JSON.parse(fs.readFileSync('data/services.json'));const get=id=>data.services.find(s=>s.id===id);
+test('公式料金表の8つの請求額を保持',()=>{assert.deepEqual(Object.values(get('marrish').pricing.web),[3800,8800,14800,19800]);assert.deepEqual(Object.values(get('youbride').pricing.ios),[5500,11800,20800,34800])});
+test('Pairsとyoubride Androidの未取得金額を保留',()=>{assert.equal(calculate(get('pairs'),{months:1,channel:'web'}).total,null);assert.equal(calculate(get('youbride'),{months:12,channel:'android'}).total,null)});
+test('5サービスに公式出典・確認日時・届出確認状態あり',()=>{assert.equal(data.services.length,5);for(const s of data.services){assert.ok(s.sources.length>=2);for(const r of s.sources){assert.match(r.url,/^https:\/\//);assert.ok(Number.isFinite(Date.parse(r.checkedAt)))}assert.match(s.registration,/独立照会/);assert.ok(s.cancel.length>10)}});
+test('全契約期間・支払経路の組合せでNaNを表示しない',()=>{for(const s of data.services)for(const months of [1,3,6,12])for(const channel of ['web','ios','android'])for(const billing of ['monthly','bundle']){const r=calculate(s,{months,channel,billing});assert.ok(r.total===null||Number.isFinite(r.total));assert.ok(r.monthly===null||Number.isFinite(r.monthly))}});
+test('マリッシュ12か月一括と月払い・追加料金を区別',()=>{const s=get('marrish');assert.equal(calculate(s,{months:12,channel:'web',billing:'bundle',option:'premium'}).total,40600);assert.equal(calculate(s,{months:12,channel:'web',billing:'monthly',option:'premium'}).total,76800)});
